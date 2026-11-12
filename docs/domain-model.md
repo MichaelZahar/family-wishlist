@@ -10,13 +10,14 @@
 | --- | --- | --- |
 | **Family** | Семья (= organization Better Auth) | `id`, `name` |
 | **Profile** | Член семьи, владелец пула | `id`, `family_id`, `user_id?`, `managed_by_profile_id?`, `display_name`, `avatar_url?` |
-| **Wish** | Желание | `id`, `family_id`, `owner_profile_id`, `kind` (concrete/abstract), `title`, `description?`, `url?`, `price?`, `currency?`, `image_url?`, `store?`, `priority` (1–3), `parse_status`, `status`, `deleted_at?` |
+| **Wish** | Желание | `id`, `family_id`, `owner_profile_id`, `kind` (concrete/abstract), `title`, `description?`, `url?`, `price?`, `currency?`, `image_url?`, `store?`, `parse_status`, `status`, `deleted_at?` |
 | **Wishlist** | Подборка | `id`, `family_id`, `owner_profile_id`, `title`, `event_id?`, `status` (active/archived) |
 | **WishlistItem** | Желание в вишлисте | `wishlist_id`, `wish_id`, `position` |
 | **WishlistShare** | Доступ пользователю | `wishlist_id`, `recipient_profile_id`, `created_at` |
 | **ShareLink** | Доступ по ссылке | `id`, `wishlist_id`, `token_hash`, `created_at`, `revoked_at?` |
 | **Reservation** | Бронь | `id`, `family_id`, `wish_id`, `reserver_profile_id?`, `guest_name?`, `guest_token_hash?`, `share_link_id?`, `status` (active/cancelled/gifted), `created_at` |
-| **Event** | Повод | `id`, `family_id`, `profile_id`, `type` (birthday/anniversary/holiday/custom), `title`, `date`, `yearly` |
+| **Event** | Повод профиля | `id`, `family_id`, `profile_id`, `type` (birthday/anniversary/holiday/custom), `holiday_id?`, `title`, `date`, `yearly` |
+| **Holiday** | Системный каталог праздников (без `family_id`, исключение из D-01) | `id`, `title`, `date_rule`, `region?` |
 | **Reminder** | Напоминание получателю | `id`, `event_id`, `occurrence_date`, `recipient_profile_id`, `offset_days` (14/3), `seen_at?` |
 | **FeedEntry** | Запись ленты | `id`, `family_id`, `wishlist_id`, `wish_id`, `type` (wish_added/wish_updated/wish_removed), `created_at` |
 
@@ -34,6 +35,7 @@
 | Wishlist → ShareLink | 1 : N, активна ≤ 1 |
 | Wish → Reservation | 1 : N, активна ≤ 1 (R-RES-06) |
 | Profile → Event | 1 : N |
+| Holiday → Event | 1 : N (профиль добавляет праздник из каталога себе) |
 | Event → Wishlist | 1 : N |
 
 ## 3. Инварианты
@@ -70,10 +72,10 @@
 | Открыт | Есть ≥ 1 WishlistShare или активная ShareLink |
 | В архиве | Дата события прошла (R-HIS-01) |
 
-## 5. Открытые вопросы
+## 5. Вопросы
 
-- **Q-07.** Годовщина — событие двоих. А: событие одного профиля, второй создаёт своё. Б: событие с несколькими профилями.
-- **Q-08.** Праздники (Новый год и т.п.). А: пользователь создаёт сам. Б: готовый список праздников.
-- **Q-09.** Кому приходят напоминания? А: получателям вишлистов, привязанных к событию. Б: всем, кому открыт хотя бы один вишлист профиля.
-- **Q-10.** Валюта. А: у каждого желания своя. Б: одна на семью.
-- **Q-11.** Шкала приоритета желания: 1–3? (TBD)
+- ✅ Q-07 → А: событие принадлежит одному профилю; годовщину каждый создаёт себе.
+- ✅ Q-08 → Б + свои: системный каталог праздников (Holiday) и пользовательские события `type = custom`. Состав каталога и регион — TBD.
+- ✅ Q-09 → А: напоминания получают только пользователи, которым открыт вишлист, привязанный к событию. Нет привязанного вишлиста — нет напоминаний.
+- ✅ Q-10 → А: у каждого желания своя валюта (`price` + `currency`), без конвертации. Бюджет абстрактного желания — так же.
+- ✅ Q-11 → В: приоритета у желания нет.
