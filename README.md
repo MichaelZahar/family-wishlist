@@ -16,7 +16,7 @@
 pnpm install
 cp .env.example .env
 pnpm db:up
-pnpm db:migrate && pnpm db:seed
+pnpm db:migrate
 pnpm dev
 ```
 

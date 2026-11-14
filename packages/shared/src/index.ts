@@ -9,3 +9,10 @@ export const appInfoSchema = z.object({
 export type AppInfo = z.infer<typeof appInfoSchema>;
 
 export const APP_INFO: AppInfo = { name: 'Family Wishlist' };
+
+// GET /api/health — проверка живости API и БД.
+export const healthResponseSchema = z.object({
+  status: z.enum(['ok', 'unavailable']),
+});
+
+export type HealthResponse = z.infer<typeof healthResponseSchema>;

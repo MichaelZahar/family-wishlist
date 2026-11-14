@@ -8,5 +8,11 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["vitest.config.ts", "scripts/**/*.ts"]
+  "include": [
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "scripts/**/*.ts",
+    "e2e/**/*.ts",
+    "apps/api/drizzle.config.ts"
+  ]
 }

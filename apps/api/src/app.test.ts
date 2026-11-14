@@ -1,16 +1,19 @@
 import { APP_INFO } from '@family-wishlist/shared';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 import { buildApp } from './app.js';
+import { createTestDb } from './test/db.js';
 
 describe('buildApp', () => {
-  const app = buildApp();
+  const { db, pool } = createTestDb();
+  const app = buildApp({ db });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
+    await pool.end();
   });
 
-  it('стартует и отвечает 404 на неизвестный путь', async () => {
+  it('отвечает 404 на неизвестный путь', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/unknown' });
 
     expect(response.statusCode).toBe(404);

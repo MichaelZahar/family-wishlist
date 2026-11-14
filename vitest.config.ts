@@ -1,9 +1,13 @@
 import react from '@vitejs/plugin-react';
-import { defaultClientConditions, defaultServerConditions } from 'vite';
+import { defaultClientConditions, defaultServerConditions, loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 // Пакет shared читается из исходников, без сборки (см. exports в packages/shared/package.json).
 const sourceCondition = '@family-wishlist/source';
+
+// Тесты API идут против тестовой БД из .env / .env.local (ADR-006); в CI переменная задана окружением.
+const env = loadEnv('test', import.meta.dirname, '');
+process.env.DATABASE_URL_TEST ??= env.DATABASE_URL_TEST;
 
 const nodeResolve = {
   resolve: { conditions: [sourceCondition, ...defaultServerConditions] },
@@ -29,6 +33,7 @@ export default defineConfig({
           root: 'apps/api',
           environment: 'node',
           include: ['src/**/*.test.ts'],
+          globalSetup: ['src/test/global-setup.ts'],
         },
       },
       {

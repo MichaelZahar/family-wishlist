@@ -7,7 +7,14 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  globalIgnores(['**/dist/', '**/node_modules/', '**/coverage/', 'docs/']),
+  globalIgnores([
+    '**/dist/',
+    '**/node_modules/',
+    '**/coverage/',
+    'docs/',
+    'playwright-report/',
+    'test-results/',
+  ]),
 
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
@@ -31,7 +38,7 @@ export default defineConfig(
   },
 
   {
-    files: ['apps/api/**/*.ts', 'scripts/**/*.ts', '*.ts'],
+    files: ['apps/api/**/*.ts', 'scripts/**/*.ts', 'e2e/**/*.ts', '*.ts'],
     languageOptions: { globals: globals.node },
   },
 

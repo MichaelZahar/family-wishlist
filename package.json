@@ -18,9 +18,11 @@
     "typecheck": "tsc -b",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
-    "db:migrate": "node scripts/db-migrate.ts",
+    "db:migrate": "pnpm --filter @family-wishlist/api db:migrate",
     "db:seed": "node scripts/db-seed.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "e2e": "playwright test",
+    "db:generate": "pnpm --filter @family-wishlist/api db:generate"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
@@ -31,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "@types/node": "^26.6.6",
     "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^10.14.0",

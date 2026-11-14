@@ -5,13 +5,20 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 
-export function buildApp(options: FastifyServerOptions = {}) {
+import type { Db } from './db/client.js';
+import { healthRoutes } from './modules/health/routes.js';
+
+export interface AppDeps {
+  db: Db;
+}
+
+export function buildApp({ db }: AppDeps, options: FastifyServerOptions = {}) {
   const app = Fastify(options).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // Роуты регистрируются здесь, начиная с фазы 3 (docs/plan.md).
+  app.register(healthRoutes, { db });
 
   return app;
 }
