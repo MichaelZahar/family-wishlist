@@ -1,22 +1,24 @@
 # Family Wishlist — доменная модель
 
-Статус: черновик · 2026-11-12. Основа: `docs/prd.md` (R-…), ADR-003, ADR-004.
+Статус: черновик · 2026-11-14. Основа: `docs/prd.md` (R-…), ADR-003, ADR-004.
 
 ## 1. Сущности
 
-Таблицы Better Auth (`user`, `session`, `account`, `organization`, `member`, `invitation`) не дублируем. Семья = `organization`, роль = `member.role`.
+Таблицы Better Auth (`user`, `session`, `account`, `verification`, `organization`, `member`) не дублируем. Семья = `organization`, роль = `member.role`. Таблица `invitation` плагина не используется: приглашения — FamilyInvitation (ADR-007).
 
 | Сущность | Назначение | Ключевые поля |
 | --- | --- | --- |
 | **Family** | Семья (= organization Better Auth) | `id`, `name` |
-| **Profile** | Член семьи, владелец пула | `id`, `family_id`, `user_id?`, `managed_by_profile_id?`, `display_name`, `avatar_url?` |
-| **Wish** | Желание | `id`, `family_id`, `owner_profile_id`, `kind` (concrete/abstract), `title`, `description?`, `url?`, `price?`, `currency?`, `image_url?`, `store?`, `priority` (1–3), `parse_status`, `status`, `deleted_at?` |
+| **Profile** | Член семьи, владелец пула | `id`, `family_id`, `user_id?`, `managed_by_profile_id?`, `display_name`, `language?` (ru/en), `avatar_url?` |
+| **FamilyInvitation** | Приглашение взрослого в семью (ADR-007) | `id`, `family_id`, `token_hash`, `created_by_profile_id`, `created_at`, `expires_at`, `used_at?`, `used_by_profile_id?`, `revoked_at?` |
+| **Wish** | Желание | `id`, `family_id`, `owner_profile_id`, `kind` (concrete/abstract), `title`, `description?`, `url?`, `price?`, `currency?`, `image_url?`, `store?`, `parse_status`, `status`, `deleted_at?` |
 | **Wishlist** | Подборка | `id`, `family_id`, `owner_profile_id`, `title`, `event_id?`, `status` (active/archived) |
 | **WishlistItem** | Желание в вишлисте | `wishlist_id`, `wish_id`, `position` |
 | **WishlistShare** | Доступ пользователю | `wishlist_id`, `recipient_profile_id`, `created_at` |
 | **ShareLink** | Доступ по ссылке | `id`, `wishlist_id`, `token_hash`, `created_at`, `revoked_at?` |
 | **Reservation** | Бронь | `id`, `family_id`, `wish_id`, `reserver_profile_id?`, `guest_name?`, `guest_token_hash?`, `share_link_id?`, `status` (active/cancelled/gifted), `created_at` |
-| **Event** | Повод | `id`, `family_id`, `profile_id`, `type` (birthday/anniversary/holiday/custom), `title`, `date`, `yearly` |
+| **Event** | Повод профиля | `id`, `family_id`, `profile_id`, `type` (birthday/anniversary/holiday/custom), `holiday_id?`, `title`, `date`, `yearly` |
+| **Holiday** | Системный каталог праздников (без `family_id`, исключение из D-01) | `id`, `title`, `date_rule`, `region?` |
 | **Reminder** | Напоминание получателю | `id`, `event_id`, `occurrence_date`, `recipient_profile_id`, `offset_days` (14/3), `seen_at?` |
 | **FeedEntry** | Запись ленты | `id`, `family_id`, `wishlist_id`, `wish_id`, `type` (wish_added/wish_updated/wish_removed), `created_at` |
 
@@ -26,6 +28,7 @@
 | --- | --- |
 | Family → Profile | 1 : N |
 | User → Profile | 1 : 0..1 в рамках семьи |
+| Family → FamilyInvitation | 1 : N |
 | Profile (взрослый) → Profile (детский) | 1 : N через `managed_by_profile_id` |
 | Profile → Wish | 1 : N |
 | Profile → Wishlist | 1 : N |
@@ -34,6 +37,7 @@
 | Wishlist → ShareLink | 1 : N, активна ≤ 1 |
 | Wish → Reservation | 1 : N, активна ≤ 1 (R-RES-06) |
 | Profile → Event | 1 : N |
+| Holiday → Event | 1 : N (профиль добавляет праздник из каталога себе) |
 | Event → Wishlist | 1 : N |
 
 ## 3. Инварианты
@@ -45,9 +49,11 @@
 - **D-05.** `reserver_profile_id` ≠ владелец желания.
 - **D-06.** Детский профиль: `user_id IS NULL` ⇔ `managed_by_profile_id IS NOT NULL`.
 - **D-07.** WishlistShare: получатель — взрослый профиль той же семьи, не владелец.
-- **D-08.** Токены ссылок и гостевых броней хранятся только как хеш.
+- **D-08.** Токены ссылок, приглашений и гостевых броней хранятся только как хеш.
 - **D-09.** Желание удаляется мягко (`deleted_at`): брони сохраняются (R-RES-07).
 - **D-10.** FeedEntry не содержит данных о бронях (R-FEED-01).
+- **D-11.** У взрослого профиля задан `language`; у детского — нет (R-AUTH-09).
+- **D-12.** Приглашение действует, пока `used_at` и `revoked_at` пусты и `expires_at` не наступил; принять его можно один раз (R-AUTH-02, R-AUTH-04).
 
 ## 4. Жизненный цикл
 
@@ -70,10 +76,10 @@
 | Открыт | Есть ≥ 1 WishlistShare или активная ShareLink |
 | В архиве | Дата события прошла (R-HIS-01) |
 
-## 5. Открытые вопросы
+## 5. Вопросы
 
-- **Q-07.** Годовщина — событие двоих. А: событие одного профиля, второй создаёт своё. Б: событие с несколькими профилями.
-- **Q-08.** Праздники (Новый год и т.п.). А: пользователь создаёт сам. Б: готовый список праздников.
-- **Q-09.** Кому приходят напоминания? А: получателям вишлистов, привязанных к событию. Б: всем, кому открыт хотя бы один вишлист профиля.
-- **Q-10.** Валюта. А: у каждого желания своя. Б: одна на семью.
-- **Q-11.** Шкала приоритета желания: 1–3? (TBD)
+- ✅ Q-07 → А: событие принадлежит одному профилю; годовщину каждый создаёт себе.
+- ✅ Q-08 → Б + свои: системный каталог праздников (Holiday) и пользовательские события `type = custom`. Состав каталога и регион — TBD.
+- ✅ Q-09 → А: напоминания получают только пользователи, которым открыт вишлист, привязанный к событию. Нет привязанного вишлиста — нет напоминаний.
+- ✅ Q-10 → А: у каждого желания своя валюта (`price` + `currency`), без конвертации. Бюджет абстрактного желания — так же.
+- ✅ Q-11 → В: приоритета у желания нет.

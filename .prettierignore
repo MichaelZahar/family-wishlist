@@ -1,0 +1,10 @@
+# Принятые документы не переформатируются автоматически (см. docs/style-guide.md)
+docs/
+
+pnpm-lock.yaml
+dist/
+coverage/
+
+# Spec Kit: шаблоны и скиллы управляются Specify CLI
+.specify/
+.claude/skills/speckit-*/
