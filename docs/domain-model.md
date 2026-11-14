@@ -1,15 +1,16 @@
 # Family Wishlist — доменная модель
 
-Статус: черновик · 2026-11-12. Основа: `docs/prd.md` (R-…), ADR-003, ADR-004.
+Статус: черновик · 2026-11-14. Основа: `docs/prd.md` (R-…), ADR-003, ADR-004.
 
 ## 1. Сущности
 
-Таблицы Better Auth (`user`, `session`, `account`, `organization`, `member`, `invitation`) не дублируем. Семья = `organization`, роль = `member.role`.
+Таблицы Better Auth (`user`, `session`, `account`, `verification`, `organization`, `member`) не дублируем. Семья = `organization`, роль = `member.role`. Таблица `invitation` плагина не используется: приглашения — FamilyInvitation (ADR-007).
 
 | Сущность | Назначение | Ключевые поля |
 | --- | --- | --- |
 | **Family** | Семья (= organization Better Auth) | `id`, `name` |
-| **Profile** | Член семьи, владелец пула | `id`, `family_id`, `user_id?`, `managed_by_profile_id?`, `display_name`, `avatar_url?` |
+| **Profile** | Член семьи, владелец пула | `id`, `family_id`, `user_id?`, `managed_by_profile_id?`, `display_name`, `language?` (ru/en), `avatar_url?` |
+| **FamilyInvitation** | Приглашение взрослого в семью (ADR-007) | `id`, `family_id`, `token_hash`, `created_by_profile_id`, `created_at`, `expires_at`, `used_at?`, `used_by_profile_id?`, `revoked_at?` |
 | **Wish** | Желание | `id`, `family_id`, `owner_profile_id`, `kind` (concrete/abstract), `title`, `description?`, `url?`, `price?`, `currency?`, `image_url?`, `store?`, `parse_status`, `status`, `deleted_at?` |
 | **Wishlist** | Подборка | `id`, `family_id`, `owner_profile_id`, `title`, `event_id?`, `status` (active/archived) |
 | **WishlistItem** | Желание в вишлисте | `wishlist_id`, `wish_id`, `position` |
@@ -27,6 +28,7 @@
 | --- | --- |
 | Family → Profile | 1 : N |
 | User → Profile | 1 : 0..1 в рамках семьи |
+| Family → FamilyInvitation | 1 : N |
 | Profile (взрослый) → Profile (детский) | 1 : N через `managed_by_profile_id` |
 | Profile → Wish | 1 : N |
 | Profile → Wishlist | 1 : N |
@@ -47,9 +49,11 @@
 - **D-05.** `reserver_profile_id` ≠ владелец желания.
 - **D-06.** Детский профиль: `user_id IS NULL` ⇔ `managed_by_profile_id IS NOT NULL`.
 - **D-07.** WishlistShare: получатель — взрослый профиль той же семьи, не владелец.
-- **D-08.** Токены ссылок и гостевых броней хранятся только как хеш.
+- **D-08.** Токены ссылок, приглашений и гостевых броней хранятся только как хеш.
 - **D-09.** Желание удаляется мягко (`deleted_at`): брони сохраняются (R-RES-07).
 - **D-10.** FeedEntry не содержит данных о бронях (R-FEED-01).
+- **D-11.** У взрослого профиля задан `language`; у детского — нет (R-AUTH-09).
+- **D-12.** Приглашение действует, пока `used_at` и `revoked_at` пусты и `expires_at` не наступил; принять его можно один раз (R-AUTH-02, R-AUTH-04).
 
 ## 4. Жизненный цикл
 
